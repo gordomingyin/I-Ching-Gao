@@ -1,0 +1,1532 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>卦算 | Ching Training Matrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&family=Ma+Shan+Zheng&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #06070b;
+    --s0: #0a0b10;
+    --bd: #1a1c26;
+    --yang: #c8a96e;
+    --yin: #4d7a96;
+    --jade: #3d9e78;
+    --ember: #685540;
+    --t0: #ddd8ce;
+    --t1: #8a8278;
+    --t2: #3e3a34;
+}
+
+html[data-theme="light"] {
+    --bg: #f4f0e8;
+    --s0: #ebe5d8;
+    --bd: #ccc4b0;
+    --yang: #7a5c1a;
+    --yin: #1a4a6a;
+    --jade: #1a6040;
+    --ember: #8a2015;
+    --t0: #1a1610;
+    --t1: #5a5040;
+    --t2: #c0b898;
+}
+
+*::before, *::after, * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--t0);
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    font-family: 'Ma Shan Zheng', cursive;
+    margin: 0;
+}
+
+#app {
+    width: 100%;
+    max-width: 430px;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+#ink-cloud {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    background: radial-gradient(circle at 50% 50%, rgba(2,2,4,0.98) 0%, rgba(6,7,11,0.92) 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.8s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+#ink-cloud.show {
+    opacity: 1;
+    transition: none;
+}
+
+#display {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    position: relative;
+    z-index: 10;
+}
+
+#panel-err {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    border-right: 1px solid var(--bd);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+#panel-err.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ep-in {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 5px;
+    padding: 6px 4px;
+}
+
+.ep-glyphs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.ep-g {
+    font-family: 'Zhi Mang Xing', cursive;
+    font-size: clamp(26px, 8vw, 42px);
+    line-height: 1;
+}
+
+.ep-g.u { color: var(--ember); }
+.ep-g.t { color: var(--jade); }
+
+.ep-df {
+    width: 100%;
+    overflow-y: auto;
+    max-height: 52%;
+}
+
+.ep-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+}
+
+.ep-row.bad {
+    background: rgba(168, 64, 48, 0.07);
+    border-color: rgba(168, 64, 48, 0.2);
+}
+
+.ep-row.ok {
+    opacity: 0.13;
+}
+
+.ep-ln {
+    flex: 1;
+    height: 4px;
+    display: flex;
+}
+
+.ep-dy {
+    width: 100%;
+    height: 4px;
+    background: var(--yang);
+}
+
+.ep-dn {
+    width: 100%;
+    display: flex;
+    gap: 22%;
+    height: 4px;
+}
+
+.ep-dnb {
+    flex: 1;
+    height: 4px;
+    background: var(--yin);
+}
+
+#panel-center {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+#flash-target {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Zhi Mang Xing', cursive;
+    font-size: clamp(72px, 20vw, 128px);
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 40px rgba(200, 169, 110, 0.9);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s;
+    z-index: 20;
+}
+
+#flash-target.show {
+    opacity: 1;
+}
+
+@keyframes plasmaWave {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+html[data-theme="light"] #flash-target {
+    background: linear-gradient(60deg, #ff1461, #ff7a00, #b000ff, #ff1461);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 15px rgba(255, 20, 97, 0.45));
+    animation: plasmaWave 2s ease infinite;
+}
+
+#yao-frame {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+#yao-display {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.yl {
+    cursor: pointer;
+    transition: opacity 0.1s;
+}
+
+.yl:hover {
+    opacity: 0.75;
+}
+
+.yl-yang {
+    width: 100%;
+    border-radius: 1px;
+    background: linear-gradient(to right, transparent 2%, var(--yang) 18%, rgba(255, 248, 200, 0.9) 50%, var(--yang) 82%, transparent 98%);
+    box-shadow: 0 0 8px var(--yang), 0 0 18px rgba(200, 169, 110, 0.2);
+}
+
+.yl-yin {
+    width: 100%;
+    display: flex;
+    gap: 18%;
+}
+
+.yl-yin-b {
+    flex: 1;
+    border-radius: 1px;
+}
+
+.yl-yin-b:first-child {
+    background: linear-gradient(to right, var(--yin) 0%, rgba(77, 122, 150, 0.5) 60%, transparent 100%);
+    box-shadow: 2px 0 8px rgba(77, 122, 150, 0.5);
+}
+
+.yl-yin-b:last-child {
+    background: linear-gradient(to left, var(--yin) 0%, rgba(77, 122, 150, 0.5) 60%, transparent 100%);
+    box-shadow: 2px 0 8px rgba(77, 122, 150, 0.5);
+}
+
+.yl-blank {
+    width: 100%;
+    border: 1px solid var(--bd);
+    border-radius: 2px;
+    opacity: 0.18;
+}
+
+.glow #yao-display {
+    animation: pulseGlow 1.2s infinite alternate;
+}
+
+@keyframes pulseGlow {
+    from {filter: drop-shadow(0 0 10px rgba(61,158,120,0.6)); }
+    to {filter: drop-shadow(0 0 30px rgba(61,158,120,0.9)); }
+}
+
+#panel-right {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    border-left: 1px solid var(--bd);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+}
+
+#panel-right.show {
+    opacity: 1;
+}
+
+#ri-sym {
+    font-family: 'Zhi Mang Xing', cursive;
+    font-size: clamp(40px, 10vw, 68px);
+    color: var(--yang);
+    line-height: 1;
+    filter: drop-shadow(0 0 10px rgba(200, 169, 110, 0.3));
+}
+
+#ri-name {
+    font-family: 'Zhi Mang Xing', cursive;
+    font-size: clamp(14px, 4vw, 22px);
+}
+
+#ri-pin {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(7px, 2vw, 10px);
+    color: var(--t1);
+    font-style: italic;
+}
+
+#ri-tri {
+    font-size: clamp(17px, 5.5vw, 26px);
+    line-height: 1;
+    color: var(--t1);
+    letter-spacing: 0.22em;
+}
+
+#ri-yao {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--t2);
+    text-align: center;
+    max-height: 70px;
+    overflow-y: auto;
+    width: 95%;
+    line-height: 1.2;
+}
+
+#btn-grid {
+    flex: 0 0 22dvh;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    border-top: 1px solid var(--bd);
+}
+
+.gb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    cursor: pointer;
+    color: var(--t2);
+    border: 1px solid #0c0c0e;
+    user-select: none;
+    line-height: 1;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: 'Zhi Mang Xing', cursive;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+}
+
+.gb:active, .gb.on {
+    color: var(--yang);
+    background: rgba(200, 169, 110, 0.05);
+}
+
+.gb.on-yin {
+    color: var(--yin);
+    background: rgba(77, 122, 150, 0.05);
+}
+
+.gb.matched {
+    color: var(--jade);
+    background: rgba(61, 158, 120, 0.07);
+}
+
+.gb.hz { font-size: 14px; }
+.gb.tri { font-size: 11px; }
+.gb.dgr { font-size: 10px; }
+.gb.yao { font-size: 12px; }
+.gb.ctg { font-family: 'Ma Shan Zheng', cursive; font-size: 9px; }
+
+#mini-display {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 5px;
+    border: 1px solid var(--bd);
+    gap: 0;
+}
+
+#ctrl {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2px;
+    background: var(--s0);
+    border-top: 1px solid var(--bd);
+    padding: 4px 6px;
+    flex-wrap: nowrap;
+}
+
+.cb {
+    font-family: 'Zhi Mang Xing', cursive;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid var(--bd);
+    color: var(--t1);
+    cursor: pointer;
+    border-radius: 2px;
+    padding: 3px 5px;
+    user-select: none;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.cb:active {
+    color: var(--yang);
+    border-color: var(--yang);
+}
+
+.cb.dng:active {
+    color: var(--ember);
+    border-color: var(--ember);
+}
+
+#flash-btn {
+    font-family: 'Space Mono', system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: all 0.2s ease;
+}
+
+#flash-btn.s-null { background: var(--yang); color: #000; }
+#flash-btn.s-build { background: transparent; color: var(--yang); border: 1px solid rgba(200,169,110,0.4); }
+#flash-btn.s-ok { background: transparent; color: var(--jade); border: 1px solid rgba(61,158,120,0.4); }
+#flash-btn.s-err { background: transparent; color: var(--ember); border: 1px solid rgba(168,64,48,0.3); }
+
+#hex-icon {
+    font-family: 'Zhi Mang Xing', cursive;
+    font-size: 22px;
+    line-height: 1;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--t2);
+    opacity: 0.35;
+    flex-shrink: 0;
+    min-width: 24px;
+    text-align: center;
+}
+
+#hex-icon.matched {
+    color: var(--jade);
+    opacity: 1;
+}
+
+.sc-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.sc-v {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--yang);
+}
+
+.sc-l {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 7px;
+    color: var(--t2);
+}
+
+.ds {
+    display: flex;
+    gap: 2px;
+}
+
+.db {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 10px;
+    background: transparent;
+    color: var(--t2);
+    border: 1px solid var(--bd);
+    padding: 2px 3px;
+    cursor: pointer;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.db.on {
+    color: var(--yang);
+    border-color: rgba(200,169,110,0.3);
+}
+
+#theme-btn {
+    font-size: 13px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--t1);
+    flex-shrink: 0;
+    padding: 2px 4px;
+    line-height: 1;
+}
+
+#theme-btn:active { color: var(--yang); }
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="ink-cloud"></div>
+    
+    <div id="display">
+        <div id="panel-err">
+            <div class="ep-in">
+                <div class="ep-glyphs">
+                    <span id="eu-g" class="ep-g u"></span>
+                    <span id="et-g" class="ep-g t"></span>
+                </div>
+                <div class="ep-df" id="ep-diffs"></div>
+            </div>
+        </div> 
+        
+        <div id="panel-center">
+            <div id="flash-target"></div>
+            <div id="yao-frame">
+                <div id="yao-display"></div>
+            </div>
+        </div>
+        
+        <div id="panel-right">
+            <div id="ri-sym"></div>
+            <div id="ri-name">-</div>
+            <div id="ri-pin">-</div>
+            <div id="ri-tri">-</div>
+            <div id="ri-yao">-</div>
+        </div>
+    </div>
+    
+    <div id="btn-grid"></div>
+    
+    <div id="ctrl">
+        <button class="cb" onclick="toggleOff()" title="Clear/Reset states">◯</button>
+        <button class="cb" onclick="totalFlip()" title="Flip all state values">↻</button>
+        <button class="cb" onclick="invertHex()" title="Invert entire hexagram">➰</button>
+        <button class="cb" onclick="flipTopBottom()" title="Flip top and bottom trigrams">⼋</button>
+        <button class="cb" onclick="swapTrigrams()" title="Swap trigrams positions">⇅</button>
+        <button id="hex-icon" onclick="speakCurrent()" title="Speak aloud"></button>
+        <button id="flash-btn" class="s-null" onclick="handleFlash()"></button>
+        <button class="cb dng" onclick="doReset()" title="Reset current training round">↺</button>
+        <button class="cb dng" onclick="doRestart()" title="Hard restart training and stats">⚠️</button>
+        
+        <div class="sc-item"><div class="sc-v" id="sv">0</div><div class="sc-l">連</div></div>
+        <div class="sc-item"><div class="sc-v" id="tv">0</div><div class="sc-l">節</div></div>
+        
+        <div class="ds">
+            <button class="db on" id="dB" onclick="setMode('B')">初</button>
+            <button class="db" id="dI" onclick="setMode('I')">中</button>
+            <button class="db" id="dM" onclick="setMode('M')">師</button>
+        </div> 
+        
+        <button id="theme-btn" onclick="toggleTheme()" title="Toggle Yin/Yang Mode">ש</button>
+    </div>
+</div>
+<script>
+const Y = 'YANG', N = 'YIN', V = null;
+const GY = [], LY = [];
+
+const T = {
+    QIAN: {id: 'QIAN', g: '☰', z: '乾', d: Y, k: Y, p: Y},
+    XUN: {id: 'XUN', g: '☴', z: '巽', d: Y, k: Y, p: N},
+    LI: {id: 'LI', g: '☲', z: '離', d: Y, k: N, p: Y},
+    GEN: {id: 'GEN', g: '☶', z: '艮', d: Y, k: N, p: N},
+    DUI: {id: 'DUI', g: '☱', z: '兌', d: N, k: Y, p: Y},
+    KAN: {id: 'KAN', g: '☵', z: '坎', d: N, k: Y, p: N},
+    ZHEN: {id: 'ZHEN', g: '☳', z: '震', d: N, k: N, p: Y},
+    KUN: {id: 'KUN', g: '☷', z: '坤', d: N, k: N, p: N}
+};
+
+Object.values(T).forEach(t => {
+    if (t.k === Y) GY.push(t);
+    else LY.push(t);
+});
+
+const TSEQ = [T.LI, T.KUN, T.ZHEN, T.GEN, T.KAN, T.QIAN, T.XUN, T.DUI];
+
+const RAW = [
+    "QIAN,QIAN,,乾,qián", "KUN,KUN,,坤,kūn", "KAN,ZHEN,,屯,zhūn", "GEN,KAN,,蒙,méng",
+    "KAN,QIAN,,需,xū", "QIAN,KAN,,訟,sòng", "KUN,KAN,,師,shī", "KAN,KUN,,⽐,bǐ",
+    "XUN,QIAN,,⼩畜,xiǎo xù", "QIAN,DUI,,履,lǚ", "KUN,QIAN,,泰,tài", "QIAN,KUN,,否,pǐ",
+    "QIAN,LI,,同⼈,tóng rén", "LI,QIAN,,⼤有,dà yǒu", "KUN,GEN,,謙,qiān", "ZHEN,KUN,,豫,yù",
+    "DUI,ZHEN,,隨,suí", "GEN,XUN,,蠱,gǔ", "KUN,DUI,,臨,lín", "XUN,KUN,,觀,guān",
+    "LI,ZHEN,,噬嗑,shì kè", "GEN,LI,,賁,bì", "GEN,KUN,,剝,bō", "KUN,ZHEN,,復,fù",
+    "QIAN,ZHEN,,無妄,wú wàng", "GEN,QIAN,,⼤畜,dà xù", "GEN,ZHEN,,頤,yí", "DUI,XUN,,⼤過,dà guò",
+    "KAN,KAN,,坎,kǎn", "LI,LI,,離,lí", "DUI,GEN,,咸,xián", "ZHEN,XUN,,恆,héng", 
+    "QIAN,GEN,,遯,dùn", "ZHEN,QIAN,,⼤壯,dà zhuàng", "LI,KUN,,晉,jìn", "KUN,LI,,明夷,míng yí",
+    "XUN,LI,,家⼈,jiā rén", "LI,DUI,,睽,kuí", "KAN,GEN,,蹇,jiǎn", "ZHEN,KAN,,解,jiě",
+    "GEN,DUI,,損,sǔn", "XUN,ZHEN,,益,yì", "DUI,QIAN,,夬,guài", "QIAN,XUN,,姤,gòu",
+    "DUI,KUN,,萃,cuì", "KUN,XUN,,升,shēng", "DUI,KAN,,困,kùn", "KAN,XUN,,井,jǐng",
+    "DUI,LI,,⾰,gé", "LI,XUN,,鼎,dǐng", "ZHEN,ZHEN,,震,zhèn", "GEN,GEN,,艮,gèn",
+    "XUN,GEN,,漸,jiàn", "ZHEN,DUI,,歸妹,guī mèi", "ZHEN,LI,,豐,fēng", "LI,GEN,,旅,lǚ",
+    "XUN,XUN,,巽,xùn", "DUI,DUI,,兌,duì", "XUN,KAN,,渙,huàn", "KAN,DUI,,節,jié",
+    "XUN,DUI,,中孚,zhōng fú", "ZHEN,GEN,,⼩過,xiǎo guò", "KAN,LI,,既濟,jì jì", "LI,KAN,,未濟,wèi jì"
+];
+
+const SIGS = RAW.map((s, index) => {
+    const [e, c, dummy, z, p] = s.split(',');
+    const hexChar = String.fromCharCode(0x4DC0 + index);
+    return {
+        ext: T[e.trim()],
+        cen: T[c.trim()],
+        id: `${e.trim()}-${c.trim()}`,
+        g: hexChar,
+        z: z.trim(),
+        p: p.trim()
+    };
+});
+
+const LM = [
+    {r: 'cen', n: 'p'}, {r: 'cen', n: 'k'}, {r: 'cen', n: 'd'},
+    {r: 'ext', n: 'p'}, {r: 'ext', n: 'k'}, {r: 'ext', n: 'd'}
+];
+
+function sigToN(sig) {
+    return (sig.cen.p === Y ? 32 : 0) + (sig.cen.k === Y ? 16 : 0) + (sig.cen.d === Y ? 8 : 0) +
+    (sig.ext.p === Y ? 4 : 0) + (sig.ext.k === Y ? 2 : 0) + (sig.ext.d === Y ? 1 : 0);
+}
+
+function invN(n) { return 63 - n; }
+
+function flipN(n) {
+    let r = 0; 
+    for (let i = 0; i < 6; i++) {
+        r += (Math.floor(n / Math.pow(2, i)) % 2) * Math.pow(2, 5 - i);
+    }
+    return r;
+}
+
+const PAIRS = [];
+const _sp = new Set();
+SIGS.forEach(sig => {
+    if (_sp.has(sig.id)) return;
+    const n = sigToN(sig);
+    const fn = flipN(n);
+    const pn = fn !== n ? fn : invN(n);
+    const pair = SIGS.find(s => sigToN(s) === pn) || sig;
+    _sp.add(sig.id);
+    _sp.add(pair.id);
+    PAIRS.push([sig, pair]);
+});
+
+function get4(sa, sb) {
+    const raw = [
+        sa,
+        SIGS.find(s => sigToN(s) === invN(sigToN(sa))) || sa,
+        sb,
+        SIGS.find(s => sigToN(s) === invN(sigToN(sb))) || sb
+    ];
+    const out = [];
+    const seen = new Set();
+    for (const x of raw) {
+        if (!seen.has(x.id)) {
+            seen.add(x.id);
+            out.push(x);
+        }
+    }
+    return out;
+} 
+
+let Proj = { ext: {d:V, k:V, p:V}, cen: {d:V, k:V, p:V} };
+
+function getLines() {
+    return LM.map(m => Proj[m.r][m.n] === Y ? 1 : (Proj[m.r][m.n] === N ? 0 : null));
+}
+
+function linesToN() {
+    const l = getLines();
+    return l.some(v => v === null) ? null : l[0]*32 + l[1]*16 + l[2]*8 + l[3]*4 + l[4]*2 + l[5];
+}
+
+function togP(c) { return c === V ? Y : (c === Y ? N : Y); }
+function invP(p) { return p === V ? V : (p === Y ? N : Y); }
+
+function getActiveTri(r) {
+    const s = Proj[r];
+    if (s.d === V || s.k === V || s.p === V) return null;
+    return Object.values(T).find(t => t.d === s.d && t.k === s.k && t.p === s.p);
+}
+
+function getResolvedSig() {
+    const e = getActiveTri('ext'), c = getActiveTri('cen');
+    if (!e || !c) return null;
+    return SIGS.find(s => s.ext === e && s.cen === c);
+}
+
+function voidCount() {
+    let n = 0;
+    for (const r of ['ext', 'cen']) {
+        for (const k of ['d', 'k', 'p']) {
+            if (Proj[r][k] === V) n++;
+        }
+    }
+    return n;
+}
+
+function toggleOff(silent) {
+    Proj = { ext: {d:V, k:V, p:V}, cen: {d:V, k:V, p:V} }; 
+    if (!silent) sndReset();
+    render();
+}
+
+function totalFlip() {
+    for (const r of ['ext', 'cen']) {
+        for (const n of ['d', 'k', 'p']) {
+            if (Proj[r][n] !== V) Proj[r][n] = invP(Proj[r][n]);
+        }
+    }
+    render();
+    playTone();
+}
+
+function invertHex() {
+    if (voidCount() > 0) return;
+    for (const r of ['ext', 'cen']) {
+        for (const n of ['d', 'k', 'p']) {
+            Proj[r][n] = invP(Proj[r][n]);
+        }
+    }
+    render();
+    playTone();
+}
+
+function flipTopBottom() {
+    const ed = Proj.ext.d, ek = Proj.ext.k, ep = Proj.ext.p;
+    const cd = Proj.cen.d, ck = Proj.cen.k, cp = Proj.cen.p;
+    Proj.ext.d = cp; Proj.ext.k = ck; Proj.ext.p = cd;
+    Proj.cen.d = ep; Proj.cen.k = ek; Proj.cen.p = ed;
+    render();
+    playTone();
+}
+
+function swapTrigrams() {
+    const t = { ...Proj.ext };
+    Proj.ext = { ...Proj.cen };
+    Proj.cen = t; 
+    render();
+    playTone();
+}
+
+function flipLine(i) {
+    const {r, n} = LM[i];
+    Proj[r][n] = togP(Proj[r][n]);
+    render();
+    playTone();
+}
+
+function cycleSX(r, bLine, tLine) {
+    let bv = Proj[r][bLine], tv = Proj[r][tLine];
+    if (bv === Y && tv === Y) { bv = Y; tv = N; }
+    else if (bv === Y && tv === N) { bv = N; tv = N; }
+    else if (bv === N && tv === N) { bv = N; tv = Y; }
+    else if (bv === N && tv === Y) { bv = Y; tv = Y; }
+    else { bv = Y; tv = Y; }
+    
+    Proj[r][bLine] = bv;
+    Proj[r][tLine] = tv;
+    
+    render();
+    playTone();
+}
+
+function tEU() { cycleSX('ext', 'k', 'd'); }
+function tEL() { cycleSX('ext', 'p', 'k'); }
+function tCU() { cycleSX('cen', 'k', 'd'); }
+function tCL() { cycleSX('cen', 'p', 'k'); }
+function tUY() { Proj.ext.k = togP(Proj.ext.k); render(); playTone(); }
+function tLY() { Proj.cen.k = togP(Proj.cen.k); render(); playTone(); }
+
+function toggleBothMiddleYaos() {
+    Proj.ext.k = togP(Proj.ext.k);
+    Proj.cen.k = togP(Proj.cen.k);
+    render(); 
+    playTone();
+}
+
+function swapMiddleYaos() {
+    const temp = Proj.ext.k;
+    Proj.ext.k = Proj.cen.k;
+    Proj.cen.k = temp;
+    render();
+    playTone();
+}
+
+const triIdx = { ext: {g:0, l:0}, cen: {g:0, l:0} };
+
+function cycleTri(reg, fam) {
+    const tris = fam === 'g' ? GY : LY;
+    const i = triIdx[reg][fam];
+    const t = tris[i];
+    Proj[reg].d = t.d; Proj[reg].k = t.k; Proj[reg].p = t.p;
+    triIdx[reg][fam] = (i + 1) % tris.length;
+    render();
+    playTone();
+}
+
+function getVT(reg, fam) {
+    const a = getActiveTri(reg);
+    const tris = fam === 'g' ? GY : LY;
+    if (a && tris.includes(a)) return a;
+    return tris[triIdx[reg][fam]];
+}
+
+function applyProj(sig) {
+    Proj.ext.d = sig.ext.d; Proj.ext.k = sig.ext.k; Proj.ext.p = sig.ext.p;
+    Proj.cen.d = sig.cen.d; Proj.cen.k = sig.cen.k; Proj.cen.p = sig.cen.p;
+}
+
+function dTopo(states) {
+    const h = states.length === 3 ? 3 : 4, gap = states.length === 3 ? 3 : (states.length === 2 ? 4 : 0); 
+    const tH = states.length * h + (states.length - 1) * gap, sY = (24 - tH) / 2;
+    let s = '<svg viewBox="0 0 24 24" width="1.5em" height="1.5em" style="fill:currentColor; display:block; margin:auto;">';
+    states.forEach((st, i) => {
+        if (st === V) return;
+        const y = sY + i * (h + gap);
+        if (st === Y) {
+            s += `<rect x="2" y="${y}" width="20" height="${h}" rx=".5"/>`;
+        } else {
+            s += `<rect x="2" y="${y}" width="8" height="${h}" rx=".5"/><rect x="14" y="${y}" width="8" height="${h}" rx=".5"/>`;
+        }
+    });
+    return s + '</svg>';
+}
+
+function dN(s) { return s === V ? ' ' : dTopo([s]); }
+function dL(a, b) { return (a === V || b === V) ? ' ' : dTopo([a, b]); }
+function dT(t) { return dTopo([t.d, t.k, t.p]); }
+
+function sizeDisplay() {
+    const cp = document.getElementById('panel-center');
+    if (!cp) return;
+    const r = cp.getBoundingClientRect();
+    const sq = Math.min(r.width, r.height) * 0.82;
+    const yd = document.getElementById('yao-display');
+    if (yd) yd.style.width = Math.round(sq * 0.68) + 'px';
+    window._lh = Math.max(5, Math.round(sq / 17));
+    renderYao();
+}
+
+function renderYao() {
+    const d = document.getElementById('yao-display');
+    if (!d) return;
+    const sig = getResolvedSig();
+    d.style.fontFamily = "'Zhi Mang Xing', cursive";
+    d.style.fontSize = "clamp(72px, 20vw, 128px)";
+    d.style.lineHeight = "1"; 
+    d.style.color = "var(--yang)";
+    d.style.textShadow = "0 0 40px rgba(200,169,110,0.9)";
+    d.style.display = "flex";
+    d.style.alignItems = "center";
+    d.style.justifyContent = "center";
+    d.style.width = "100%";
+    d.style.height = "100%";
+    d.textContent = sig ? sig.g : "";
+    if (d.classList.contains('glow')) {
+        d.style.color = "var(--jade)";
+        d.style.textShadow = "0 0 40px rgba(61,158,120,0.9)";
+    }
+}
+
+function updateMini() {
+    const md = document.getElementById('mini-display');
+    if (!md) return;
+    md.innerHTML = '';
+    md.style.gap = '2px';
+    const lh = 8;
+    const lines = getLines();
+    for (let i = 5; i >= 0; i--) {
+        const v = lines[i], div = document.createElement('div');
+        div.className = 'yl';
+        div.style.height = lh + 'px';
+        div.style.width = '88%';
+        div.style.margin = '1px auto';
+        div.dataset.i = i;
+        div.onclick = () => flipLine(i);
+        
+        if (v === null) {
+            const b = document.createElement('div');
+            b.className = 'yl-blank';
+            b.style.height = '100%';
+            div.appendChild(b);
+        } else if (v === 1) {
+            const b = document.createElement('div');
+            b.className = 'yl-yang'; 
+            b.style.height = '100%';
+            div.appendChild(b);
+        } else {
+            const w = document.createElement('div');
+            w.className = 'yl-yin';
+            w.style.height = '100%';
+            [0, 1].forEach(() => {
+                const b = document.createElement('div');
+                b.className = 'yl-yin-b';
+                b.style.height = '100%';
+                w.appendChild(b);
+            });
+            div.appendChild(w);
+        }
+        md.appendChild(div);
+    }
+}
+
+let ac = null;
+function gAC() {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+}
+
+function hz(m) { return 432 * Math.pow(2, (m - 69) / 12); }
+
+function osc(m, t, d, vol, delay, glide) {
+    try {
+        const a = gAC(), o = a.createOscillator(), g = a.createGain(), st = a.currentTime + (delay || 0);
+        o.type = t;
+        
+        if (glide) {
+            o.frequency.setValueAtTime(hz(m - 12), st);
+            o.frequency.exponentialRampToValueAtTime(hz(m), st + 0.2);
+        } else {
+            o.frequency.setValueAtTime(hz(m), st);
+        }
+        
+        g.gain.setValueAtTime(0.0001, st);
+        g.gain.exponentialRampToValueAtTime(vol, st + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.001, st + d);
+        o.connect(g);
+        g.connect(a.destination);
+        o.start(st); 
+        o.stop(st + d + 0.05);
+    } catch (e) {}
+}
+
+function sndHex(sig) {
+    const i = SIGS.indexOf(sig);
+    if (i < 0) return;
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc(36 + i, 'sine', 0.6, 0.13, 0, isLight);
+}
+
+function sndTri(t, e) {
+    const i = TSEQ.indexOf(t);
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc((e ? 60 : 48) + i * 2, 'triangle', 0.45, 0.11, 0, isLight);
+}
+
+function sndSX(a, b, e) {
+    if (a === V || b === V) return;
+    const dg = (a === Y ? 1 : 0) * 2 + (b === Y ? 1 : 0);
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc((e ? 55 : 43) + [0, 3, 5, 7][dg], 'triangle', 0.32, 0.1, 0, isLight);
+}
+
+function sndYao(p, e) {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc((e ? 48 : 36) + (p === Y ? 7 : 0), 'sine', 0.22, 0.09, 0, isLight);
+}
+
+function sndOK() { 
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc(72, 'sine', 0.5, 0.12, 0, isLight); 
+}
+function sndFail() { 
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc(36, 'square', 0.4, 0.12, 0, isLight); 
+}
+function sndReset() { 
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc(30, 'sawtooth', 0.25, 0.1, 0, isLight); 
+} 
+function sndRestart() { 
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc(24, 'sawtooth', 0.5, 0.12, 0, isLight); 
+}
+function sndApex() {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    osc(48, 'sine', 0.8, 0.12, 0, isLight);
+}
+
+function playTone() {
+    const cur = getResolvedSig();
+    if (cur) { sndHex(cur); return; }
+    
+    const eT = getActiveTri('ext'), cT = getActiveTri('cen');
+    if (eT) { sndTri(eT, true); return; }
+    if (cT) { sndTri(cT, false); return; }
+    
+    const ep = Proj.ext, cp = Proj.cen;
+    if (ep.k !== V) {
+        if (ep.d !== V) sndSX(ep.k, ep.d, true);
+        else if (ep.p !== V) sndSX(ep.p, ep.k, true);
+        else sndYao(ep.k, true);
+        return;
+    }
+    if (cp.k !== V) {
+        if (cp.d !== V) sndSX(cp.k, cp.d, false);
+        else if (cp.p !== V) sndSX(cp.p, cp.k, false);
+        else sndYao(cp.k, false);
+        return;
+    } 
+}
+
+function speakCurrent() {
+    const sig = getResolvedSig();
+    if (!sig || !window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(sig.z);
+    u.lang = 'zh-TW';
+    u.rate = 0.82;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+}
+
+function render() {
+    renderYao();
+    refreshBG();
+    const sig = getResolvedSig();
+    const hi = document.getElementById('hex-icon');
+    hi.textContent = sig ? sig.g : '';
+    hi.className = sig ? 'matched' : '';
+    updateFlashBtn();
+}
+
+function updateRight(sig) {
+    document.getElementById('ri-sym').textContent = sig ? sig.g : '';
+    document.getElementById('ri-name').textContent = sig ? sig.z : '-';
+    document.getElementById('ri-pin').textContent = sig ? sig.p : '-';
+    document.getElementById('ri-tri').textContent = sig ? `${sig.ext.g} ${sig.cen.g}` : '-';
+    document.getElementById('ri-yao').textContent = sig ?
+        [sig.ext.d, sig.ext.k, sig.ext.p, sig.cen.d, sig.cen.k, sig.cen.p].map(s => s === Y ? '━' : '╍').join(' ') : '-';
+}
+
+function hideSP() {
+    document.getElementById('panel-err').classList.remove('show');
+    document.getElementById('panel-right').classList.remove('show');
+}
+
+const dyn = {}, btnState = {}; 
+
+function mkB(html, css, fn, title) {
+    const b = document.createElement('button');
+    b.className = 'gb ' + (css || '');
+    b.innerHTML = html;
+    if (title) b.title = title;
+    b.onclick = fn;
+    return b;
+}
+
+function bPC(el, p) {
+    el.classList.remove('on', 'on-yin');
+    if (p === Y) el.classList.add('on');
+    else if (p === N) el.classList.add('on-yin');
+}
+
+function mkHex(pi) {
+    if (pi >= PAIRS.length) {
+        const d = document.createElement('div');
+        d.className = 'gb';
+        return d;
+    }
+    const [sa, sb] = PAIRS[pi];
+    const ss = get4(sa, sb);
+    if (btnState[pi] === undefined) btnState[pi] = 0;
+    btnState[pi] = btnState[pi] % ss.length;
+    const b = document.createElement('button');
+    b.className = 'gb hz';
+    b.textContent = ss[btnState[pi]].g;
+    b.title = sa.z + '.' + sb.z;
+    b.dataset.pi = pi;
+    
+    b.onclick = () => {
+        let act = ss[btnState[pi]];
+        const curN = linesToN();
+        if (curN !== null && curN === sigToN(act)) {
+            btnState[pi] = (btnState[pi] + 1) % ss.length;
+            act = ss[btnState[pi]]; 
+            b.textContent = act.g;
+        }
+        const an = sigToN(act);
+        const loadSeq = [4, 1, 5, 2, 3, 0];
+        const lines = getLines();
+        for (let i = 0; i < loadSeq.length; i++) {
+            const idx = loadSeq[i];
+            const tgt = Math.floor(an / Math.pow(2, 5 - idx)) % 2;
+            if (lines[idx] !== tgt) {
+                const {r, n} = LM[idx];
+                Proj[r][n] = tgt === 1 ? Y : N;
+                render();
+                playTone();
+                break;
+            }
+        }
+        refreshHL();
+    };
+    return b;
+}
+
+function refreshHL() {
+    const curN = linesToN();
+    document.querySelectorAll('.gb.hz[data-pi]').forEach(b => {
+        const pi = parseInt(b.dataset.pi);
+        if (isNaN(pi) || pi >= PAIRS.length) return;
+        const ss = get4(PAIRS[pi][0], PAIRS[pi][1]);
+        b.classList.toggle('matched', !!(curN !== null && ss.some(s => sigToN(s) === curN)));
+    });
+}
+
+function buildGrid() {
+    const grid = document.getElementById('btn-grid');
+    grid.innerHTML = '';
+    
+    dyn.eYao = mkB(dN(Proj.ext.k), 'yao', tUY);
+    dyn.cYao = mkB(dN(Proj.cen.k), 'yao', tLY);
+    
+    dyn.eU = mkB(dL(Proj.ext.k, Proj.ext.d), 'dgr', tEU);
+    dyn.eL = mkB(dL(Proj.ext.p, Proj.ext.k), 'dgr', tEL);
+    dyn.cU = mkB(dL(Proj.cen.k, Proj.cen.d), 'dgr', tCU);
+    dyn.cL = mkB(dL(Proj.cen.p, Proj.cen.k), 'dgr', tCL);
+    
+    dyn.eTG = mkB('', 'tri', () => cycleTri('ext', 'g'));
+    dyn.eTL = mkB('', 'tri', () => cycleTri('ext', 'l'));
+    dyn.cTG = mkB('', 'tri', () => cycleTri('cen', 'g'));
+    dyn.cTL = mkB('', 'tri', () => cycleTri('cen', 'l'));
+    
+    dyn.midToggle = mkB('⽘', 'yao', toggleBothMiddleYaos, '翻轉雙中⽘ (Toggle upper and lower middle yaos)');
+    dyn.midSwap = mkB('⽘', 'yao', swapMiddleYaos, '交換雙中⽘ (Swap upper and lower middle yaos)');
+    
+    function pl(el, col, row) {
+        el.style.gridColumn = col;
+        el.style.gridRow = row;
+        grid.appendChild(el);
+    }
+    
+    pl(dyn.cYao, 5, 1);
+    pl(dyn.cU, 6, 1);
+    pl(dyn.eU, 7, 1);
+    pl(dyn.eYao, 8, 1);
+    
+    pl(dyn.cL, 5, 2);
+    pl(dyn.cTG, 6, 2);
+    pl(dyn.eTL, 7, 2);
+    pl(dyn.eL, 8, 2);
+    
+    pl(dyn.cTL, 5, 3);
+    pl(dyn.eTG, 8, 3);
+    
+    pl(dyn.midToggle, 5, 4);
+    pl(dyn.midSwap, 8, 4);
+    
+    const md = document.createElement('div');
+    md.id = 'mini-display';
+    md.style.gridColumn = '6/8';
+    md.style.gridRow = '3/5';
+    grid.appendChild(md);
+    
+    for (let row = 0; row < 4; row++) {
+        for (let i = 0; i < 4; i++) {
+            const bL = mkHex(row * 4 + i);
+            bL.style.gridColumn = i + 1;
+            bL.style.gridRow = row + 1;
+            grid.appendChild(bL);
+            
+            const bR = mkHex(16 + row * 4 + i);
+            bR.style.gridColumn = i + 9;
+            bR.style.gridRow = row + 1;
+            grid.appendChild(bR);
+        }
+    }
+    refreshBG();
+}
+
+function refreshBG() {
+    const ep = Proj.ext, cp = Proj.cen;
+    if (dyn.eYao) { dyn.eYao.innerHTML = dN(ep.k); bPC(dyn.eYao, ep.k); }
+    if (dyn.cYao) { dyn.cYao.innerHTML = dN(cp.k); bPC(dyn.cYao, cp.k); }
+    
+    if (dyn.eU) {
+        dyn.eU.innerHTML = dL(ep.k, ep.d);
+        dyn.eU.classList.toggle('on', ep.d === Y);
+        dyn.eU.classList.toggle('on-yin', ep.d === N);
+    }
+    if (dyn.eL) {
+        dyn.eL.innerHTML = dL(ep.p, ep.k);
+        dyn.eL.classList.toggle('on', ep.p === Y);
+        dyn.eL.classList.toggle('on-yin', ep.p === N);
+    }
+    if (dyn.cU) {
+        dyn.cU.innerHTML = dL(cp.k, cp.d);
+        dyn.cU.classList.toggle('on', cp.d === Y);
+        dyn.cU.classList.toggle('on-yin', cp.d === N);
+    }
+    if (dyn.cL) {
+        dyn.cL.innerHTML = dL(cp.p, cp.k);
+        dyn.cL.classList.toggle('on', cp.p === Y);
+        dyn.cL.classList.toggle('on-yin', cp.p === N);
+    }
+    
+    const eT = getActiveTri('ext'), cT = getActiveTri('cen');
+    if (dyn.eTG) { dyn.eTG.innerHTML = dT(getVT('ext', 'g')); dyn.eTG.classList.toggle('on', !!(eT && GY.includes(eT))); }
+    if (dyn.eTL) { dyn.eTL.innerHTML = dT(getVT('ext', 'l')); dyn.eTL.classList.toggle('on-yin', !!(eT && LY.includes(eT))); }
+    if (dyn.cTG) { dyn.cTG.innerHTML = dT(getVT('cen', 'g')); dyn.cTG.classList.toggle('on', !!(cT && GY.includes(cT))); }
+    if (dyn.cTL) { dyn.cTL.innerHTML = dT(getVT('cen', 'l')); dyn.cTL.classList.toggle('on-yin', !!(cT && LY.includes(cT))); }
+    
+    if (dyn.midToggle) {
+        const eq = (ep.k === cp.k);
+        if (ep.k !== V && cp.k !== V) {
+            dyn.midToggle.classList.toggle('on', eq);
+            dyn.midToggle.classList.toggle('on-yin', !eq);
+        } else {
+            dyn.midToggle.classList.remove('on', 'on-yin');
+        }
+    }
+    if (dyn.midSwap) {
+        const diff = (ep.k !== cp.k && ep.k !== V && cp.k !== V);
+        dyn.midSwap.classList.toggle('matched', diff);
+    } 
+    refreshHL();
+    updateMini();
+}
+
+let activeTarget = null, isTraining = false, streak = 0, totalN = 0, state = 'idle';
+let cascadeQ = [], cascadeIdx = 0, cascadeTimer = null, mode = 'B';
+const MS = { B: [3, 5, 7], I: [6, 12, 16, 24], M: [32, 48, 64] };
+let modeIdx = 0, missed = [], inRem = false, seqLen = 3, seq = [], seqIdx = 0;
+const MXDUR = 1100, MNDUR = 130;
+
+const FB = {
+    idle: { l: 'ℵ₀', c: 's-null' },
+    flashing: { l: 'ℵ₀', c: 's-null' },
+    building: { l: 'ℵ', c: 's-build' },
+    'result-ok': { l: 'ℵ ∴', c: 's-ok' },
+    'result-err': { l: 'ℵ', c: 's-err' },
+    cascade: { l: 'ℵ₁', c: 's-ok' }
+};
+
+function updateFlashBtn() {
+    const s = FB[state] || FB.idle, b = document.getElementById('flash-btn');
+    b.textContent = s.l;
+    b.className = s.c;
+}
+
+function genSeq() {
+    seq = [];
+    for (let i = 0; i < seqLen; i++) seq.push(SIGS[Math.floor(Math.random() * 64)]);
+    seqIdx = 0;
+}
+
+function doFlash() {
+    toggleOff(true);
+    if (!seq.length || seqIdx >= seqLen) genSeq();
+    activeTarget = seq[seqIdx];
+    hideSP();
+    
+    document.getElementById('yao-display').classList.remove('glow');
+    document.getElementById('mini-display').classList.remove('glow');
+    
+    const ft = document.getElementById('flash-target');
+    ft.textContent = activeTarget.g;
+    ft.classList.add('show');
+    sndHex(activeTarget);
+    state = 'flashing';
+    render();
+    
+    const dur = Math.max(MNDUR, MXDUR - streak * 55) + Math.floor(Math.random() * 80);
+    setTimeout(() => {
+        ft.classList.remove('show');
+        isTraining = true;
+        state = 'building';
+        toggleOff(true);
+    }, dur);
+}
+
+function showErr(inp) {
+    document.getElementById('panel-err').classList.add('show');
+    document.getElementById('eu-g').textContent = inp ? inp.g : '';
+    document.getElementById('et-g').textContent = activeTarget.g;
+    
+    const c = document.getElementById('ep-diffs');
+    c.innerHTML = '';
+    
+    const nodes = [
+        {i: Proj.ext.d, o: activeTarget.ext.d}, {i: Proj.ext.k, o: activeTarget.ext.k}, {i: Proj.ext.p, o: activeTarget.ext.p},
+        {i: Proj.cen.d, o: activeTarget.cen.d}, {i: Proj.cen.k, o: activeTarget.cen.k}, {i: Proj.cen.p, o: activeTarget.cen.p}
+    ];
+    nodes.forEach(n => {
+        const bad = n.i !== n.o;
+        const r = document.createElement('div');
+        r.className = 'ep-row ' + (bad ? 'bad' : 'ok');
+        r.innerHTML = `<div class="ep-ln">${n.i === Y ? '<div class="ep-dy"></div>' : '<div class="ep-dn"><div class="ep-dnb"></div><div class="ep-dnb"></div></div>'}</div>` + 
+        `<div class="ep-ln">${n.o === Y ? '<div class="ep-dy"></div>' : '<div class="ep-dn"><div class="ep-dnb"></div><div class="ep-dnb"></div></div>'}</div>`;
+        c.appendChild(r);
+    });
+}
+
+function doSubmit() {
+    if (!isTraining || voidCount() > 0) return;
+    const inp = getResolvedSig();
+    isTraining = false;
+    seqIdx++;
+    
+    const ft = document.getElementById('flash-target');
+    ft.textContent = activeTarget.g;
+    ft.classList.add('show');
+    setTimeout(() => ft.classList.remove('show'), 300);
+    
+    if (inp === activeTarget) {
+        streak++;
+        totalN++;
+        document.getElementById('sv').textContent = streak;
+        document.getElementById('tv').textContent = totalN;
+        sndOK();
+        state = 'result-ok';
+        applyProj(activeTarget);
+        
+        const yd = document.getElementById('yao-display');
+        const md = document.getElementById('mini-display');
+        yd.classList.remove('glow');
+        md.classList.remove('glow');
+        void yd.offsetWidth;
+        void md.offsetWidth;
+        renderYao();
+        updateMini();
+        yd.classList.add('glow');
+        md.classList.add('glow'); 
+        
+        updateRight(activeTarget);
+        document.getElementById('panel-right').classList.add('show');
+    } else {
+        const ink = document.getElementById('ink-cloud');
+        ink.classList.add('show');
+        void ink.offsetWidth;
+        ink.classList.remove('show');
+        missed.push(activeTarget);
+        document.getElementById('tv').textContent = totalN;
+        sndFail();
+        state = 'result-err';
+        showErr(inp);
+        render();
+    }
+    updateFlashBtn();
+}
+
+function handleFlash() {
+    if (state === 'cascade' || state === 'flashing') return;
+    switch (state) {
+        case 'idle': doFlash(); break;
+        case 'building': doSubmit(); break;
+        case 'result-ok':
+        case 'result-err': clearCont(); break;
+    }
+}
+
+function clearCont() {
+    toggleOff(true);
+    document.getElementById('flash-target').classList.remove('show');
+    document.getElementById('yao-display').classList.remove('glow');
+    document.getElementById('mini-display').classList.remove('glow');
+    hideSP();
+    state = 'idle';
+    render();
+    
+    if (seqIdx >= seqLen) {
+        if (inRem) {
+            inRem = false;
+            seq = [];
+        } else if (missed.length > 0) {
+            seq = [...missed];
+            missed = [];
+            seqIdx = 0;
+            seqLen = seq.length;
+            inRem = true;
+            streak = 0;
+            document.getElementById('sv').textContent = streak;
+            setTimeout(doFlash, 150);
+            return;
+        } else {
+            modeIdx++;
+            const mA = MS[mode];
+            if (modeIdx >= mA.length) { startCascade(); return; }
+            seqLen = mA[modeIdx];
+            seqIdx = 0;
+            seq = [];
+        }
+    }
+    setTimeout(doFlash, 150);
+}
+
+function startCascade() {
+    state = 'cascade';
+    updateFlashBtn();
+    hideSP();
+    document.getElementById('yao-display').classList.remove('glow');
+    document.getElementById('mini-display').classList.remove('glow');
+    cascadeQ = [...SIGS].sort(() => Math.random() - 0.5);
+    cascadeIdx = 0;
+    playCasc();
+}
+
+function playCasc() {
+    const ft = document.getElementById('flash-target'); 
+    if (cascadeIdx >= cascadeQ.length) {
+        sndApex();
+        cascadeTimer = setTimeout(() => { ft.classList.remove('show'); advTier(); }, 1600);
+        return;
+    }
+    const sig = cascadeQ[cascadeIdx];
+    ft.textContent = sig.g;
+    ft.classList.add('show');
+    sndHex(sig);
+    cascadeIdx++;
+    cascadeTimer = setTimeout(() => {
+        ft.classList.remove('show');
+        setTimeout(playCasc, 800);
+    }, 900);
+}
+
+function advTier() {
+    modeIdx++;
+    if (modeIdx >= MS[mode].length) {
+        if (mode === 'B') setMode('I');
+        else if (mode === 'I') setMode('M');
+        else { state = 'idle'; render(); return; }
+        return;
+    }
+    seqLen = MS[mode][modeIdx];
+    state = 'idle';
+    doReset(true);
+}
+
+function doReset(silent) {
+    if (!silent) sndReset();
+    if (cascadeTimer) { clearTimeout(cascadeTimer); cascadeTimer = null; }
+    isTraining = false;
+    activeTarget = null;
+    seq = [];
+    seqIdx = 0;
+    state = 'idle';
+    cascadeQ = []; 
+    cascadeIdx = 0;
+    document.getElementById('flash-target').classList.remove('show');
+    document.getElementById('yao-display').classList.remove('glow');
+    document.getElementById('mini-display').classList.remove('glow');
+    hideSP();
+    toggleOff(true);
+}
+
+function doRestart() {
+    sndRestart();
+    streak = 0;
+    totalN = 0;
+    missed = [];
+    inRem = false;
+    document.getElementById('sv').textContent = 0;
+    document.getElementById('tv').textContent = 0;
+    doReset(true);
+    setMode(mode);
+}
+
+function setMode(m) {
+    if (state === 'building') return;
+    mode = m;
+    modeIdx = 0;
+    seqLen = MS[m][0];
+    seq = [];
+    seqIdx = 0;
+    missed = [];
+    inRem = false;
+    ['B', 'I', 'M'].forEach(x => {
+        document.getElementById('d' + x).className = 'db' + (x === m ? ' on' : '');
+    });
+}
+
+function toggleTheme() {
+    const rt = document.documentElement;
+    rt.dataset.theme = rt.dataset.theme === 'light' ? 'dark' : 'light';
+}
+
+document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); handleFlash(); }
+    if (e.key === 'r' || e.key === 'R') doReset();
+    if (e.key === '4') invertHex();
+    if (e.key === '8') flipTopBottom();
+    if (e.key === 'f' || e.key === 'F') totalFlip();
+});
+
+window.addEventListener('resize', sizeDisplay);
+window.onload = () => {
+    buildGrid();
+    setTimeout(() => { sizeDisplay(); render(); }, 80);
+};
+</script>
+</body>
+</html>
