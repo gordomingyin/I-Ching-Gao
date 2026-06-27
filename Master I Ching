@@ -1,0 +1,622 @@
+<!DOCTYPE html>  
+<html lang="zh-TW" data-theme="dark">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
+<title>卦算 | Ching Training Matrix</title>  
+<link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&family=Ma+Shan+Zheng&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">  
+<style>  
+:root{--bg:#06070b;--s0:#0a0b10;--bd:#1a1c26;--yang:#c8a96e;--yin:#4d7a96;--jade:#3d9e78;--ember:#b85540;--t0:#ddd8ce;--t1:#8a8278;--t2:#3e3a34;}  
+html[data-theme="light"]{--bg:#f4f0e8;--s0:#ebe5d8;--bd:#ccc4b0;--yang:#7a5c1a;--yin:#1a4a6a;--jade:#1a6040;--ember:#8a2015;--t0:#1a1610;--t1:#5a5040;--t2:#c0b898;}  
+*::before,*::after,*{box-sizing:border-box;margin:0;padding:0}  
+html,body{height:100dvh;width:100%;overflow:hidden;background:var(--bg);color:var(--t0);transition:background .3s ease,color .3s ease}  
+body{display:flex;justify-content:center;font-family:'Ma Shan Zheng',cursive;margin:0}  
+#app{width:100%;max-width:430px;height:100dvh;display:flex;flex-direction:column;position:relative}  
+  
+#ink-cloud{position:absolute;inset:0;z-index:100;opacity:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(2,2,4,.98) 0%,rgba(6,7,11,.92) 100%);transition:opacity 1.8s cubic-bezier(.1,.9,.2,1)}  
+#ink-cloud.show{opacity:1;transition:none}  
+#display{flex:1;min-height:0;display:flex;position:relative;z-index:10}  
+#panel-err{flex:1;position:relative;overflow:hidden;background:var(--bg);border-right:1px solid var(--bd);opacity:0;pointer-events:none;transition:opacity .2s}  
+#panel-err.show{opacity:1;pointer-events:auto}  
+.ep-in{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:5px;padding:6px 4px}  
+.ep-glyphs{display:flex;align-items:center;justify-content:center;gap:10px}  
+.ep-g{font-family:'Zhi Mang Xing',cursive;font-size:clamp(26px,8vw,42px);line-height:1}  
+.ep-g.u{color:var(--ember)}.ep-g.t{color:var(--jade)}  
+.ep-df{width:100%;overflow-y:auto;max-height:52%}  
+.ep-row{display:flex;align-items:center;gap:3px;padding:2px;margin-bottom:2px;border:1px solid transparent}  
+.ep-row.bad{background:rgba(168,64,48,.07);border-color:rgba(168,64,48,.2)}  
+.ep-row.ok{opacity:.13}  
+.ep-ln{flex:1;height:4px;display:flex}  
+.ep-dy{width:100%;height:4px;background:var(--yang)}  
+.ep-dn{width:100%;display:flex;gap:22%;height:4px}  
+.ep-dnb{flex:1;height:4px;background:var(--yin)}  
+  
+#panel-center{flex:1;position:relative;overflow:hidden;background:var(--bg)}  
+#flash-target{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Zhi Mang Xing',cursive;font-size:clamp(110px,28vw,190px);line-height:1;color:#fff;text-shadow:0 0 40px rgba(200,169,110,.9);pointer-events:none;opacity:0;transition:opacity .8s;z-index:20}  
+#flash-target.show{opacity:1}  
+@keyframes plasmaWave{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}  
+html[data-theme="light"] #flash-target{background:linear-gradient(60deg,#ff1461,#ff7a00,#b000ff,#ff1461);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:transparent;text-shadow:none;filter:drop-shadow(0 0 15px rgba(255,20,97,.45));animation:plasmaWave 2s ease infinite}  
+#yao-frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2}  
+#yao-display{display:flex;flex-direction:column;gap:5px}  
+  
+.yl{cursor:pointer;transition:opacity .1s}.yl:hover{opacity:.75}  
+.yl-yang{width:100%;border-radius:1px;background:linear-gradient(to right,transparent 2%,var(--yang) 18%,rgba(255,248,200,.9) 50%,var(--yang) 82%,transparent 98%);box-shadow:0 0 8px var(--yang),0 0 18px rgba(200,169,110,.2)}  
+.yl-yin{width:100%;display:flex;gap:18%}  
+.yl-yin-b{flex:1;border-radius:1px}  
+.yl-yin-b:first-child{background:linear-gradient(to right,var(--yin) 0%,rgba(77,122,150,.5) 60%,transparent 100%);box-shadow:2px 0 8px rgba(77,122,150,.5)}  
+.yl-yin-b:last-child{background:linear-gradient(to left,var(--yin) 0%,rgba(77,122,150,.5) 60%,transparent 100%);box-shadow:2px 0 8px rgba(77,122,150,.5)}  
+.yl-blank{width:100%;border:1px solid var(--bd);border-radius:2px;opacity:.18}  
+.glow .yl-yang{background:linear-gradient(to right,transparent 2%,var(--jade) 18%,rgba(180,255,200,.9) 50%,var(--jade) 82%,transparent 98%);box-shadow:0 0 18px rgba(61,158,120,.8)}  
+.glow .yl-yin-b{box-shadow:0 0 12px rgba(61,158,120,.6);background:var(--jade)!important}  
+.glow .yl[data-i="2"],.glow .yl[data-i="3"]{animation:emerge .15s ease-out both}  
+.glow .yl[data-i="1"],.glow .yl[data-i="4"]{animation:emerge .15s ease-out .07s both}  
+.glow .yl[data-i="0"],.glow .yl[data-i="5"]{animation:emerge .15s ease-out .14s both}  
+@keyframes emerge{from{opacity:0;transform:scaleX(.4)}to{opacity:1;transform:scaleX(1)}}  
+  
+#panel-right{flex:1;position:relative;overflow:hidden;background:var(--bg);border-left:1px solid var(--bd);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px}  
+#panel-right.show{opacity:1}  
+#ri-sym{font-family:'Zhi Mang Xing',cursive;font-size:clamp(40px,10vw,68px);color:var(--yang);line-height:1;filter:drop-shadow(0 0 10px rgba(200,169,110,.3))}  
+#ri-name{font-family:'Zhi Mang Xing',cursive;font-size:clamp(14px,4vw,22px)}  
+#ri-pin{font-family:'Space Mono',monospace;font-size:clamp(7px,2vw,10px);color:var(--t1);font-style:italic}  
+#ri-tri{font-size:clamp(17px,5.5vw,26px);line-height:1;color:var(--t1);letter-spacing:.22em}  
+#ri-yao{font-family:'Space Mono','Ma Shan Zheng',monospace;font-size:10px;color:var(--t2);text-align:center;max-height:85px;overflow-y:auto;width:95%;line-height:1.2}  
+#btn-grid{flex:0 0 22dvh;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(4,1fr);border-top:1px solid var(--bd)}  
+.gb{display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;color:var(--t2);border:1px solid #0c0c0e;user-select:none;line-height:1;overflow:hidden;background:var(--bg);font-family:'Zhi Mang Xing',cursive;-webkit-tap-highlight-color:transparent;transition:all .15s ease}  
+.gb:active,.gb.on{color:var(--yang);background:rgba(200,169,110,.05)}  
+.gb.on-yin{color:var(--yin);background:rgba(77,122,150,.05)}  
+.gb.matched{color:var(--jade);background:rgba(61,158,120,.07)}  
+.gb.hz{font-size:14px}.gb.tri{font-size:11px}.gb.dgr{font-size:10px}.gb.yao{font-size:12px}  
+#mini-display{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 5px;border:1px solid var(--bd);gap:0}  
+  
+#ctrl{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:2px;background:var(--s0);border-top:1px solid var(--bd);padding:5px 6px;flex-wrap:nowrap}  
+.cb{font-family:'Zhi Mang Xing',cursive;font-size:12px;background:transparent;border:1px solid var(--bd);color:var(--t1);cursor:pointer;border-radius:2px;padding:3px 5px;user-select:none;line-height:1;flex-shrink:0}  
+.cb:active{color:var(--yang);border-color:var(--yang)}  
+.cb.dng{font-size:16px;padding:5px 8px}  
+.cb.dng:active{color:var(--ember);border-color:var(--ember)}  
+#flash-btn{font-family:'Space Mono',system-ui,sans-serif;font-size:20px;font-weight:700;padding:6px 16px;border:none;border-radius:2px;cursor:pointer;flex-shrink:0;line-height:1;transition:all .2s ease}  
+#flash-btn.s-null{background:var(--yang);color:#000}  
+#flash-btn.s-build{background:transparent;color:var(--yang);border:1px solid rgba(200,169,110,.4)}  
+#flash-btn.s-ok{background:transparent;color:var(--jade);border:1px solid rgba(61,158,120,.4)}  
+#flash-btn.s-err{background:transparent;color:var(--ember);border:1px solid rgba(168,64,48,.3)}  
+#hex-icon{font-family:'Zhi Mang Xing',cursive;font-size:30px;line-height:1;background:none;border:none;cursor:pointer;color:var(--t2);opacity:.35;flex-shrink:0;min-width:28px;text-align:center}  
+#hex-icon.matched{color:var(--jade);opacity:1}  
+.sc-item{display:flex;flex-direction:column;align-items:center;flex-shrink:0}  
+.sc-v{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--yang)}  
+.sc-l{font-family:'Ma Shan Zheng',cursive;font-size:7px;color:var(--t2)}  
+.ds{display:flex;gap:2px}  
+.db{font-family:'Ma Shan Zheng',cursive;font-size:10px;background:transparent;color:var(--t2);border:1px solid var(--bd);padding:2px 3px;cursor:pointer;border-radius:2px;flex-shrink:0}  
+.db.on{color:var(--yang);border-color:rgba(200,169,110,.3)}  
+#theme-btn{font-size:13px;background:transparent;border:none;cursor:pointer;color:var(--t1);flex-shrink:0;padding:2px 4px;line-height:1}  
+#theme-btn:active{color:var(--yang)}  
+</style>  
+</head>  
+<body>  
+<div id="app">  
+<div id="ink-cloud"></div>  
+<div id="display">  
+  <div id="panel-err">  
+    <div class="ep-in">  
+      <div class="ep-glyphs"><span id="eu-g" class="ep-g u"></span><span id="et-g" class="ep-g t"></span></div>  
+      <div class="ep-df" id="ep-diffs"></div>  
+    </div>  
+  </div>  
+  <div id="panel-center">  
+    <div id="flash-target"></div>  
+    <div id="yao-frame"><div id="yao-display"></div></div>  
+  </div>  
+  <div id="panel-right">  
+    <div id="ri-sym"></div><div id="ri-name">-</div><div id="ri-pin">-</div><div id="ri-tri">-</div><div id="ri-yao">-</div>  
+  </div>  
+</div>  
+<div id="btn-grid"></div>  
+<div id="ctrl">  
+  <button class="cb" onclick="toggleOff()" title="清空 Wuji">◯</button>  
+  <button class="cb" onclick="totalFlip()" title="翻轉 Flip active">↻</button>  
+  <button class="cb" onclick="invertHex()" title="錯卦 Complement">➰</button>  
+  <button class="cb" onclick="flipTopBottom()" title="綜卦 Reverse">⼋</button>  
+  <button class="cb" onclick="swapTrigrams()" title="交卦 Swap">⇅</button>  
+  <button id="hex-icon" onclick="speakCurrent()" title="語音"></button>  
+  <button id="flash-btn" class="s-null" onclick="handleFlash()"></button>  
+  <button class="cb dng" onclick="doReset()" title="重置">↺</button>  
+  <button class="cb dng" onclick="doRestart()" title="重啟">⚠</button>  
+  <div class="sc-item"><div class="sc-v" id="sv">0</div><div class="sc-l">連</div></div>  
+  <div class="sc-item"><div class="sc-v" id="tv">0</div><div class="sc-l">節</div></div>  
+  <div class="ds">  
+    <button class="db on" id="dB" onclick="setMode('B')">初</button>  
+    <button class="db" id="dI" onclick="setMode('I')">中</button>  
+    <button class="db" id="dM" onclick="setMode('M')">師</button>  
+  </div>  
+  <button id="theme-btn" onclick="toggleTheme()" title="主題">ש</button>  
+</div>  
+</div>  
+  
+<script>  
+const Y='YANG',N='YIN',V=null;  
+const GY=[],LY=[];  
+const T={  
+  QIAN:{id:'QIAN',g:'☰',z:'乾',d:Y,k:Y,p:Y},XUN:{id:'XUN',g:'☴',z:'巽',d:Y,k:Y,p:N},  
+  LI:{id:'LI',g:'☲',z:'離',d:Y,k:N,p:Y},GEN:{id:'GEN',g:'☶',z:'艮',d:Y,k:N,p:N},  
+  DUI:{id:'DUI',g:'☱',z:'兌',d:N,k:Y,p:Y},KAN:{id:'KAN',g:'☵',z:'坎',d:N,k:Y,p:N},  
+  ZHEN:{id:'ZHEN',g:'☳',z:'震',d:N,k:N,p:Y},KUN:{id:'KUN',g:'☷',z:'坤',d:N,k:N,p:N}  
+};  
+
+// Ordered exactly as specified: LI, KAN, DUI, GEN, XUN, ZHEN, KUN, QIAN  
+const TSEQ=[T.LI, T.KAN, T.DUI, T.GEN, T.XUN, T.ZHEN, T.KUN, T.QIAN];  
+TSEQ.forEach(t=>{if(t.k===Y)GY.push(t);else LY.push(t);});  
+
+// 64 Hexagram database with custom systematic order starting with LI, LI and ending with QIAN, QIAN.
+// Field 3 contains standard King Wen indices to dynamically map original unicode hexagram characters.
+const RAW=[  
+  "LI,LI,29,離,lí", "LI,KAN,63,未濟,wèi jì", "LI,DUI,37,睽,kuí", "LI,GEN,55,旅,lǚ",  
+  "LI,XUN,49,鼎,dǐng", "LI,ZHEN,20,噬嗑,shì kè", "LI,KUN,34,晉,jìn", "LI,QIAN,13,大有,dà yǒu",  
+  "KAN,LI,62,既濟,jì jì", "KAN,KAN,28,坎,kǎn", "KAN,DUI,59,節,jié", "KAN,GEN,38,蹇,jiǎn",  
+  "KAN,XUN,47,井,jǐng", "KAN,ZHEN,2,屯,zhūn", "KAN,KUN,7,比,bǐ", "KAN,QIAN,4,需,xū",  
+  "DUI,LI,48,革,gé", "DUI,KAN,46,困,kùn", "DUI,DUI,57,兌,duì", "DUI,GEN,30,咸,xián",  
+  "DUI,XUN,27,大過,dà guò", "DUI,ZHEN,16,隨,suí", "DUI,KUN,44,萃,cuì", "DUI,QIAN,42,夬,guài",  
+  "GEN,LI,21,賁,bì", "GEN,KAN,3,蒙,méng", "GEN,DUI,40,損,sǔn", "GEN,GEN,51,艮,gèn",  
+  "GEN,XUN,17,蠱,gǔ", "GEN,ZHEN,26,頤,yí", "GEN,KUN,22,剝,bō", "GEN,QIAN,25,大畜,dà xù",  
+  "XUN,LI,36,家人,jiā rén", "XUN,KAN,58,渙,huàn", "XUN,DUI,60,中孚,zhōng fú", "XUN,GEN,52,漸,jiàn",  
+  "XUN,XUN,56,巽,xùn", "XUN,ZHEN,41,益,yì", "XUN,KUN,19,觀,guān", "XUN,QIAN,8,小畜,xiǎo xù",  
+  "ZHEN,LI,54,豐,fēng", "ZHEN,KAN,39,解,jiě", "ZHEN,DUI,53,歸妹,guī mèi", "ZHEN,GEN,61,小過,xiǎo guò",  
+  "ZHEN,XUN,31,恆,héng", "ZHEN,ZHEN,50,震,zhèn", "ZHEN,KUN,15,豫,yù", "ZHEN,QIAN,33,大壯,dà zhuàng",  
+  "KUN,LI,35,明夷,míng yí", "KUN,KAN,6,師,shī", "KUN,DUI,18,臨,lín", "KUN,GEN,14,謙,qiān",  
+  "KUN,XUN,45,升,shēng", "KUN,ZHEN,23,復,fù", "KUN,KUN,1,坤,kūn", "KUN,QIAN,10,泰,tài",  
+  "QIAN,LI,12,同人,tóng rén", "QIAN,KAN,5,訟,sòng", "QIAN,DUI,9,履,lǚ", "QIAN,GEN,32,遯,dùn",  
+  "QIAN,XUN,43,姤,gòu", "QIAN,ZHEN,24,無妄,wú wàng", "QIAN,KUN,11,否,pǐ", "QIAN,QIAN,0,乾,qián"  
+];  
+
+const SIGS=RAW.map((s)=>{  
+  const[e,c,idx,z,p]=s.split(',');  
+  const kwIdx = parseInt(idx.trim());
+  return{ext:T[e.trim()],cen:T[c.trim()],id:`${e.trim()}-${c.trim()}`,g:String.fromCharCode(0x4DC0+kwIdx),z:z.trim(),p:p.trim()};  
+});  
+const LM=[{r:'cen',n:'p'},{r:'cen',n:'k'},{r:'cen',n:'d'},{r:'ext',n:'p'},{r:'ext',n:'k'},{r:'ext',n:'d'}];  
+function sigToN(s){return(s.cen.p===Y?32:0)+(s.cen.k===Y?16:0)+(s.cen.d===Y?8:0)+(s.ext.p===Y?4:0)+(s.ext.k===Y?2:0)+(s.ext.d===Y?1:0);}  
+function invN(n){return 63-n;}  
+function flipN(n){let r=0;for(let i=0;i<6;i++)r+=(Math.floor(n/Math.pow(2,i))%2)*Math.pow(2,5-i);return r;}  
+const PAIRS=[];const _sp=new Set();  
+SIGS.forEach(sig=>{  
+  if(_sp.has(sig.id))return;  
+  const n=sigToN(sig),fn=flipN(n),pn=fn!==n?fn:invN(n);  
+  const pair=SIGS.find(s=>sigToN(s)===pn)||sig;  
+  _sp.add(sig.id);_sp.add(pair.id);PAIRS.push([sig,pair]);  
+});  
+  
+function get4(sa,sb){  
+  const raw=[sa,SIGS.find(s=>sigToN(s)===invN(sigToN(sa)))||sa,sb,SIGS.find(s=>sigToN(s)===invN(sigToN(sb)))||sb];  
+  const out=[],seen=new Set();for(const x of raw)if(!seen.has(x.id)){seen.add(x.id);out.push(x);}return out;  
+}  
+  
+let Proj={ext:{d:V,k:V,p:V},cen:{d:V,k:V,p:V}};  
+function getLines(){return LM.map(m=>Proj[m.r][m.n]===Y?1:(Proj[m.r][m.n]===N?0:null));}  
+function linesToN(){const l=getLines();return l.some(v=>v===null)?null:l[0]*32+l[1]*16+l[2]*8+l[3]*4+l[4]*2+l[5];}  
+  
+function togP(c) {
+    if (c === V) return N;
+    if (c === N) return Y;
+    return V;
+} 
+function invP(p){return p===V?V:(p===Y?N:Y);}  
+function getActiveTri(r){const s=Proj[r];if(s.d===V||s.k===V||s.p===V)return null;return Object.values(T).find(t=>t.d===s.d&&t.k===s.k&&t.p===s.p);}  
+function getResolvedSig(){const e=getActiveTri('ext'),c=getActiveTri('cen');if(!e||c==null)return null;return SIGS.find(s=>s.ext===e&&s.cen===c);}  
+function voidCount(){let n=0;for(const r of['ext','cen'])for(const k of['d','k','p'])if(Proj[r][k]===V)n++;return n;}  
+function applyProj(sig){Proj.ext.d=sig.ext.d;Proj.ext.k=sig.ext.k;Proj.ext.p=sig.ext.p;Proj.cen.d=sig.cen.d;Proj.cen.k=sig.cen.k;Proj.cen.p=sig.cen.p;}  
+  
+function toggleOff(silent){Proj={ext:{d:V,k:V,p:V},cen:{d:V,k:V,p:V}};if(!silent)sndReset();render();}  
+function totalFlip(){for(const r of['ext','cen'])for(const n of['d','k','p'])if(Proj[r][n]!==V)Proj[r][n]=invP(Proj[r][n]);render();}  
+function invertHex(){if(voidCount()>0)return;for(const r of['ext','cen'])for(const n of['d','k','p'])Proj[r][n]=invP(Proj[r][n]);render();}  
+function flipTopBottom(){const ed=Proj.ext.d,ek=Proj.ext.k,ep=Proj.ext.p,cd=Proj.cen.d,ck=Proj.cen.k,cp=Proj.cen.p;Proj.ext.d=cp;Proj.ext.k=ck;Proj.ext.p=cd;Proj.cen.d=ep;Proj.cen.k=ek;Proj.cen.p=ed;render();}  
+function swapTrigrams(){const t={...Proj.ext};Proj.ext={...Proj.cen};Proj.cen=t;render();}  
+function flipLine(i){const{r,n}=LM[i];Proj[r][n]=togP(Proj[r][n]);render();}  
+  
+function cycleSX(r, bLine, tLine) {
+  let bv = Proj[r][bLine], tv = Proj[r][tLine];
+  const state = (bv === Y ? 'Y' : (bv === N ? 'N' : 'V')) + (tv === Y ? 'Y' : (tv === N ? 'N' : 'V'));
+
+  switch (state) {
+      case 'VV': bv = N; tv = Y; break; // Default to Yin base: Lesser Yang
+      case 'NY': bv = N; tv = N; break; // Lesser Yang -> Greater Yin
+      case 'NN': bv = Y; tv = N; break; // Greater Yin -> Lesser Yin (Yang base)
+      case 'YN': bv = Y; tv = Y; break; // Lesser Yin -> Greater Yang
+      case 'YY': bv = V; tv = V; break; // Greater Yang -> Empty/Clear
+      case 'NV': tv = Y; break; // Partial: Base Yin -> Lesser Yang
+      case 'YV': tv = N; break; // Partial: Base Yang -> Lesser Yin
+      case 'VN': bv = N; tv = N; break; // Partial: Top Yin -> Greater Yin
+      case 'VY': bv = Y; tv = Y; break; // Partial: Top Yang -> Greater Yang
+      default: bv = V; tv = V; break;
+  }
+
+  Proj[r][bLine] = bv; Proj[r][tLine] = tv;
+  render();
+} 
+  
+function tUY(){Proj.ext.k=togP(Proj.ext.k);render();}function tLY(){Proj.cen.k=togP(Proj.cen.k);render();}  
+function tEU(){cycleSX('ext','k','d');}function tEL(){cycleSX('ext','p','k');}  
+function tCU(){cycleSX('cen','k','d');}function tCL(){cycleSX('cen','p','k');}  
+function toggleBothMiddleYaos(){Proj.ext.k=togP(Proj.ext.k);Proj.cen.k=togP(Proj.cen.k);render();}  
+function swapMiddleYaos(){const t=Proj.ext.k;Proj.ext.k=Proj.cen.k;Proj.cen.k=t;render();}  
+const triIdx={ext:{g:0,l:0},cen:{g:0,l:0}};  
+function cycleTri(reg,fam){const tris=fam==='g'?GY:LY,i=triIdx[reg][fam],t=tris[i];Proj[reg].d=t.d;Proj[reg].k=t.k;Proj[reg].p=t.p;triIdx[reg][fam]=(i+1)%tris.length;render();}  
+function getVT(reg,fam){const a=getActiveTri(reg),tris=fam==='g'?GY:LY;if(a&&tris.includes(a))return a;return tris[triIdx[reg][fam]];}  
+  
+let ac=null,prevFreq=216;  
+let actOsc=null,actGain=null,actFilt=null,actVib=null,actTremGain=null;  
+window._lastVis='';  
+window._activeNodes=[];  
+  
+function gAC(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac;}  
+function hz(m){return 432*Math.pow(2,(m-69)/12);}  
+  
+function stopCurrentSound(){  
+  if(actOsc){try{actOsc.stop();actOsc.disconnect();}catch(e){}actOsc=null;}  
+  if(actGain){try{actGain.disconnect();}catch(e){}actGain=null;}  
+  if(actFilt){try{actFilt.disconnect();}catch(e){}actFilt=null;}  
+  if(actVib){try{actVib.stop();actVib.disconnect();}catch(e){}actVib=null;}  
+  if(actTremGain){try{actTremGain.disconnect();}catch(e){}actTremGain=null;}  
+}  
+  
+function stopAllAudio(){  
+  stopCurrentSound();  
+  window._activeNodes.forEach(n=>{try{n.stop();}catch(e){}try{n.disconnect();}catch(e){}});  
+  window._activeNodes=[];  
+}  
+  
+function playPanelStateSound(){  
+  stopAllAudio();  
+  const hash=getPanelStateHash();  
+  const isDark=document.documentElement.dataset.theme!=='light';  
+  const pent=[0,2,4,7,9];  
+  const prog=[];  
+  for(let i=0;i<24;i++){const oct=Math.floor(i/5),n=pent[i%5],m=45+oct*12+n;prog.push(432*Math.pow(2,(m-69)/12));}  
+  const pitchIdx=hash%24,targetFreq=prog[pitchIdx],variation=Math.floor(hash/24);  
+  const filterMult=1+(variation/30),durMod=1+(variation/60);  
+  const a=gAC();  
+  const ny=a.sampleRate?a.sampleRate/2:22050;  
+  const sF=f=>{const v=Number(f);if(isNaN(v)||v<=0)return 1;return Math.min(v,ny-10);};  
+  const t=a.currentTime;  
+  actOsc=a.createOscillator();actFilt=a.createBiquadFilter();  
+  actTremGain=a.createGain();actGain=a.createGain();  
+  actOsc.connect(actFilt);actFilt.connect(actTremGain);actTremGain.connect(actGain);actGain.connect(a.destination);  
+  if(!isDark){  
+    actTremGain.gain.value=1.0;actOsc.type='sawtooth';actFilt.type='lowpass';  
+    actFilt.frequency.setValueAtTime(sF(targetFreq*1.2),t);  
+    actFilt.frequency.exponentialRampToValueAtTime(sF(targetFreq*3*filterMult),t+0.1);  
+    actOsc.frequency.setValueAtTime(sF(prevFreq),t);  
+    actOsc.frequency.exponentialRampToValueAtTime(sF(targetFreq),t+0.15);  
+    actVib=a.createOscillator();actVib.type='sine';actVib.frequency.value=5.0+(variation%3);  
+    const vg=a.createGain();vg.gain.setValueAtTime(0,t);vg.gain.setValueAtTime(0,t+0.2);  
+    vg.gain.linearRampToValueAtTime(targetFreq*0.02,t+0.4);  
+    actVib.connect(vg);vg.connect(actOsc.frequency);actVib.start(t);  
+    const dur=0.7*durMod;  
+    actGain.gain.setValueAtTime(0.001,t);actGain.gain.exponentialRampToValueAtTime(0.3,t+0.05);  
+    actGain.gain.exponentialRampToValueAtTime(0.001,t+dur);  
+    actOsc.start(t);actOsc.stop(t+dur+0.1);actVib.stop(t+dur+0.1);  
+  }else{  
+    actOsc.type='triangle';actFilt.type='bandpass';  
+    actFilt.frequency.value=sF(targetFreq*2*filterMult);actFilt.Q.value=1.2;  
+    actOsc.frequency.setValueAtTime(sF(targetFreq),t);  
+    actVib=a.createOscillator();actVib.type='sine';actVib.frequency.value=12+(variation%4);  
+    const lg=a.createGain();lg.gain.value=0.8;actVib.connect(lg);lg.connect(actTremGain.gain);  
+    actTremGain.gain.value=0.5;actVib.start(t);  
+    const dur=0.6*durMod;  
+    actGain.gain.setValueAtTime(0.001,t);actGain.gain.exponentialRampToValueAtTime(0.4,t+0.02);  
+    actGain.gain.exponentialRampToValueAtTime(0.001,t+dur);  
+    actOsc.start(t);actOsc.stop(t+dur+0.1);actVib.stop(t+dur+0.1);  
+  }  
+  prevFreq=targetFreq;  
+}  
+function playTone(){playPanelStateSound();}  
+  
+function sndHex(sig){  
+  const i=SIGS.indexOf(sig);if(i<0)return;  
+  stopAllAudio();  
+  const f=432*Math.pow(2,((36+i)-69)/12);  
+  const a=gAC(),t=a.currentTime;  
+  const o=a.createOscillator(),g=a.createGain();  
+  o.frequency.value=f;  
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.3,t+0.1);  
+  g.gain.exponentialRampToValueAtTime(0.01,t+0.85);  
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.95);  
+  window._activeNodes.push(o,g);  
+}  
+function sndOK(){  
+  stopAllAudio();  
+  const a=gAC(),t=a.currentTime;  
+  const o=a.createOscillator(),g=a.createGain();  
+  o.frequency.value=hz(72);  
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.5,t+0.05);g.gain.exponentialRampToValueAtTime(0.01,t+0.3);  
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.4);  
+  window._activeNodes.push(o,g);  
+}  
+function sndFail(){  
+  stopAllAudio();  
+  const a=gAC(),t=a.currentTime;  
+  const o=a.createOscillator(),g=a.createGain();  
+  o.type='square';o.frequency.value=hz(36);  
+  g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.2);  
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.3);  
+  window._activeNodes.push(o,g);  
+}  
+function sndReset(){  
+  stopAllAudio();  
+  const a=gAC(),t=a.currentTime;  
+  const o=a.createOscillator(),g=a.createGain();  
+  o.type='sawtooth';o.frequency.value=hz(30);  
+  g.gain.setValueAtTime(0.25,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.15);  
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.2);  
+  window._activeNodes.push(o,g);  
+}  
+function sndRestart(){  
+  stopAllAudio();  
+  const a=gAC(),t=a.currentTime;  
+  const o=a.createOscillator(),g=a.createGain();  
+  o.type='sawtooth';o.frequency.value=hz(24);  
+  g.gain.setValueAtTime(0.5,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.5);  
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.6);  
+  window._activeNodes.push(o,g);  
+}  
+function sndApex(){  
+  stopAllAudio();  
+  const a=gAC(),t=a.currentTime;  
+  const o=a.createOscillator(),g=a.createGain();  
+  o.frequency.value=hz(48);  
+  g.gain.setValueAtTime(0.8,t);g.gain.exponentialRampToValueAtTime(0.01,t+1.2);  
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+1.5);  
+  window._activeNodes.push(o,g);  
+}  
+  
+function getPanelStateHash(){  
+  const lines=[Proj.cen.p,Proj.cen.k,Proj.cen.d,Proj.ext.p,Proj.ext.k,Proj.ext.d];  
+  let hash=0;for(let i=0;i<6;i++){const v=lines[i]===Y?2:(lines[i]===N?1:0);hash+=v*Math.pow(3,i);}return hash;  
+}  
+  
+function dTopo(states){  
+  const h=states.length===3?3:4,gap=states.length===3?3:(states.length===2?4:0);  
+  const tH=states.length*h+(states.length-1)*gap,sY=(24-tH)/2;  
+  let s='<svg viewBox="0 0 24 24" width="1.5em" height="1.5em" style="fill:currentColor;display:block;margin:auto;">';  
+  states.forEach((st,i)=>{if(st===V)return;const y=sY+i*(h+gap);if(st===Y)s+=`<rect x="2" y="${y}" width="20" height="${h}" rx=".5"/>`;else s+=`<rect x="2" y="${y}" width="8" height="${h}" rx=".5"/><rect x="14" y="${y}" width="8" height="${h}" rx=".5"/>`;});  
+  return s+'</svg>';  
+}  
+function dN(s){return s===V?'':dTopo([s]);}  
+function dL(a,b){return(a===V||b===V)?'':dTopo([a,b]);}  
+function dT(t){return dTopo([t.d,t.k,t.p]);}  
+  
+function sizeDisplay(){const cp=document.getElementById('panel-center');if(!cp)return;const r=cp.getBoundingClientRect(),sq=Math.min(r.width,r.height)*.82;const yd=document.getElementById('yao-display');if(yd)yd.style.width=Math.round(sq*.68)+'px';window._lh=Math.max(5,Math.round(sq/17));renderYao();}  
+function renderYao(){  
+  const d=document.getElementById('yao-display');if(!d)return;  
+  const sig=getResolvedSig();  
+  d.style.fontFamily="'Zhi Mang Xing',cursive";d.style.fontSize="clamp(110px,28vw,190px)";d.style.lineHeight="1";d.style.color="var(--yang)";d.style.textShadow="0 0 40px rgba(200,169,110,.9)";  
+  d.style.display="flex";d.style.alignItems="center";d.style.justifyContent="center";d.style.width="100%";d.style.height="100%";  
+  d.textContent=sig?sig.g:"";  
+  if(d.classList.contains('glow')){d.style.color="var(--jade)";d.style.textShadow="0 0 40px rgba(61,158,120,.9)";}  
+}  
+function updateMini(){  
+  const md=document.getElementById('mini-display');if(!md)return;md.innerHTML='';md.style.gap='2px';  
+  const lh=8,lines=getLines();  
+  for(let i=5;i>=0;i--){  
+    const v=lines[i],div=document.createElement('div');div.className='yl';div.style.height=lh+'px';div.style.width='88%';div.style.margin='1px auto';div.dataset.i=i;div.onclick=()=>flipLine(i);  
+    if(v===null){const b=document.createElement('div');b.className='yl-blank';b.style.height='100%';div.appendChild(b);}  
+    else if(v===1){const b=document.createElement('div');b.className='yl-yang';b.style.height='100%';div.appendChild(b);}  
+    else{const w=document.createElement('div');w.className='yl-yin';w.style.height='100%';[0,1].forEach(()=>{const b=document.createElement('div');b.className='yl-yin-b';b.style.height='100%';w.appendChild(b);});div.appendChild(w);}  
+    md.appendChild(div);  
+  }  
+}  
+function speakCurrent(){const sig=getResolvedSig();if(!sig||!window.speechSynthesis)return;const u=new SpeechSynthesisUtterance(sig.z);u.lang='zh-TW';u.rate=.82;speechSynthesis.cancel();speechSynthesis.speak(u);}  
+function render(){  
+  renderYao();refreshBG();  
+  const sig=getResolvedSig();  
+  const hi=document.getElementById('hex-icon');hi.textContent=sig?sig.g:'';hi.className=sig?'matched':'';  
+  updateFlashBtn();  
+  const vis=getLines().map(l=>l===null?'V':l).join('');  
+  if(window._lastVis!==vis){window._lastVis=vis;if((state==='idle'||state==='building')&&vis!=='VVVVVV')playTone();}  
+}  
+  
+function getSXStr(b, t) {  
+  if (b === Y && t === Y) return '⚌ 太陽';  
+  if (b === Y && t === N) return '⚍ 少陰';  
+  if (b === N && t === Y) return '⚎ 少陽';  
+  if (b === N && t === N) return '⚏ 太陰';  
+  return '';  
+}  
+  
+function getCYStr(y) {  
+  return y === Y ? '━ 陽' : '╍ 陰';  
+}  
+  
+function updateRight(sig){  
+  document.getElementById('ri-sym').textContent=sig?sig.g:'';document.getElementById('ri-name').textContent=sig?sig.z:'-';  
+  document.getElementById('ri-pin').textContent=sig?sig.p:'-';document.getElementById('ri-tri').textContent=sig?`${sig.ext.g} ${sig.cen.g}`:'-';  
+    
+  if(sig) {  
+    const ep = sig.ext, cp = sig.cen;  
+    const eu = getSXStr(ep.k, ep.d), ec = getCYStr(ep.k), el = getSXStr(ep.p, ep.k);  
+    const cu = getSXStr(cp.k, cp.d), cc = getCYStr(cp.k), cl = getSXStr(cp.p, cp.k);  
+      
+    document.getElementById('ri-yao').innerHTML = `  
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px; text-align:left; padding: 0 2px;">  
+        <div>  
+          <div style="color:var(--yang); border-bottom:1px solid var(--bd); margin-bottom:2px; text-align:center;">外 Ext</div>  
+          <div style="white-space:nowrap;">上: ${eu}</div>  
+          <div style="white-space:nowrap;">核: ${ec}</div>  
+          <div style="white-space:nowrap;">下: ${el}</div>  
+        </div>  
+        <div>  
+          <div style="color:var(--yang); border-bottom:1px solid var(--bd); margin-bottom:2px; text-align:center;">內 Cen</div>  
+          <div style="white-space:nowrap;">上: ${cu}</div>  
+          <div style="white-space:nowrap;">核: ${cc}</div>  
+          <div style="white-space:nowrap;">下: ${cl}</div>  
+        </div>  
+      </div>  
+    `;  
+  } else {  
+    document.getElementById('ri-yao').innerHTML = '-';  
+  }  
+}  
+  
+function hideSP(){document.getElementById('panel-err').classList.remove('show');document.getElementById('panel-right').classList.remove('show');}  
+  
+const dyn={},btnState={};  
+function mkB(html,css,fn,title){const b=document.createElement('button');b.className='gb '+(css||'');b.innerHTML=html;if(title)b.title=title;b.onclick=fn;return b;}  
+function bPC(el,p){el.classList.remove('on','on-yin');if(p===Y)el.classList.add('on');else if(p===N)el.classList.add('on-yin');}  
+  
+function mkHex(pi){  
+  if(pi>=PAIRS.length){const d=document.createElement('div');d.className='gb';return d;}  
+  const[sa,sb]=PAIRS[pi],ss=get4(sa,sb);  
+  if(btnState[pi]===undefined)btnState[pi]=0;btnState[pi]=btnState[pi]%ss.length;  
+  const b=document.createElement('button');b.className='gb hz';b.textContent=ss[btnState[pi]].g;b.title=sa.z+'·'+sb.z;b.dataset.pi=pi;  
+  b.onclick=()=>{  
+    let act=ss[btnState[pi]];const curN=linesToN();  
+    if(curN!==null&&curN===sigToN(act)){btnState[pi]=(btnState[pi]+1)%ss.length;act=ss[btnState[pi]];b.textContent=act.g;}  
+    const an=sigToN(act);  
+    const loadSeq = [4, 1, 5, 2, 3, 0];   
+    const lines = getLines();  
+    for (let i = 0; i < loadSeq.length; i++) {  
+        const idx = loadSeq[i];  
+        const tgt = Math.floor(an / Math.pow(2, 5 - idx)) % 2;  
+        if (lines[idx] !== tgt) {  
+            const { r, n } = LM[idx]; Proj[r][n] = tgt === 1 ? Y : N;  
+            render(); break;  
+        }  
+    }  
+    refreshHL();  
+  };return b;  
+}  
+  
+function refreshHL(){const curN=linesToN();document.querySelectorAll('.gb.hz[data-pi]').forEach(b=>{const pi=parseInt(b.dataset.pi);if(isNaN(pi)||pi>=PAIRS.length)return;const ss=get4(PAIRS[pi][0],PAIRS[pi][1]);b.classList.toggle('matched',!!(curN!==null&&ss.some(s=>sigToN(s)===curN)));});}  
+  
+function buildGrid(){  
+  const grid=document.getElementById('btn-grid');grid.innerHTML='';  
+  dyn.eYao=mkB(dN(Proj.ext.k),'yao',tUY);dyn.cYao=mkB(dN(Proj.cen.k),'yao',tLY);  
+  dyn.eU = mkB(dL(Proj.ext.k, Proj.ext.d), 'dgr', tEU);  
+  dyn.eL = mkB(dL(Proj.ext.p, Proj.ext.k), 'dgr', tEL);  
+  dyn.cU = mkB(dL(Proj.cen.k, Proj.cen.d), 'dgr', tCU);  
+  dyn.cL = mkB(dL(Proj.cen.p, Proj.cen.k), 'dgr', tCL);  
+  dyn.eTG=mkB('','tri',()=>cycleTri('ext','g'));dyn.eTL=mkB('','tri',()=>cycleTri('ext','l'));  
+  dyn.cTG=mkB('','tri',()=>cycleTri('cen','g'));dyn.cTL=mkB('','tri',()=>cycleTri('cen','l'));  
+  dyn.midToggle=mkB('⽘','yao',toggleBothMiddleYaos,'翻轉雙中爻');  
+  dyn.midSwap=mkB('⽘','yao',swapMiddleYaos,'交換雙中爻');  
+  function pl(el,col,row){el.style.gridColumn=col;el.style.gridRow=row;grid.appendChild(el);}  
+  pl(dyn.cYao,5,1);pl(dyn.cU,6,1);pl(dyn.eU,7,1);pl(dyn.eYao,8,1);  
+  pl(dyn.cL,5,2);pl(dyn.cTG,6,2);pl(dyn.eTL,7,2);pl(dyn.eL,8,2);  
+  pl(dyn.cTL,5,3);pl(dyn.eTG,8,3);  
+  pl(dyn.midToggle,5,4);pl(dyn.midSwap,8,4);  
+  const md=document.createElement('div');md.id='mini-display';md.style.gridColumn='6/8';md.style.gridRow='3/5';grid.appendChild(md);  
+  for(let row=0;row<4;row++){for(let i=0;i<4;i++){  
+    const bL=mkHex(row*4+i);bL.style.gridColumn=i+1;bL.style.gridRow=row+1;grid.appendChild(bL);  
+    const bR=mkHex(16+row*4+i);bR.style.gridColumn=i+9;bR.style.gridRow=row+1;grid.appendChild(bR);  
+  }}  
+  refreshBG();  
+}  
+function refreshBG(){  
+  const ep=Proj.ext,cp=Proj.cen;  
+  if(dyn.eYao){dyn.eYao.innerHTML=dN(ep.k);bPC(dyn.eYao,ep.k);}  
+  if(dyn.cYao){dyn.cYao.innerHTML=dN(cp.k);bPC(dyn.cYao,cp.k);}  
+  if(dyn.eU){dyn.eU.innerHTML=dL(ep.k,ep.d);dyn.eU.classList.toggle('on',ep.d===Y);dyn.eU.classList.toggle('on-yin',ep.d===N);}  
+  if(dyn.eL){dyn.eL.innerHTML=dL(ep.p,ep.k);dyn.eL.classList.toggle('on',ep.p===Y);dyn.eL.classList.toggle('on-yin',ep.p===N);}  
+  if(dyn.cU){dyn.cU.innerHTML=dL(cp.k,cp.d);dyn.cU.classList.toggle('on',cp.d===Y);dyn.cU.classList.toggle('on-yin',cp.d===N);}  
+  if(dyn.cL){dyn.cL.innerHTML=dL(cp.p,cp.k);dyn.cL.classList.toggle('on',cp.p===Y);dyn.cL.classList.toggle('on-yin',cp.p===N);}  
+  const eT=getActiveTri('ext'),cT=getActiveTri('cen');  
+  if(dyn.eTG){dyn.eTG.innerHTML=dT(getVT('ext','g'));dyn.eTG.classList.toggle('on',!!(eT&&GY.includes(eT)));}  
+  if(dyn.eTL){dyn.eTL.innerHTML=dT(getVT('ext','l'));dyn.eTL.classList.toggle('on-yin',!!(eT&&LY.includes(eT)));}  
+  if(dyn.cTG){dyn.cTG.innerHTML=dT(getVT('cen','g'));dyn.cTG.classList.toggle('on',!!(cT&&GY.includes(cT)));}  
+  if(dyn.cTL){dyn.cTL.innerHTML=dT(getVT('cen','l'));dyn.cTL.classList.toggle('on-yin',!!(cT&&LY.includes(cT)));}  
+  if(dyn.midToggle){const eq=(ep.k===cp.k);if(ep.k!==V&&cp.k!==V){dyn.midToggle.classList.toggle('on',eq);dyn.midToggle.classList.toggle('on-yin',!eq);}else dyn.midToggle.classList.remove('on','on-yin');}  
+  if(dyn.midSwap)dyn.midSwap.classList.toggle('matched',ep.k!==cp.k&&ep.k!==V&&cp.k!==V);  
+  refreshHL();updateMini();  
+}  
+  
+let activeTarget=null,isTraining=false,streak=0,totalN=0,state='idle';  
+let cascadeQ=[],cascadeIdx=0,cascadeTimer=null,mode='B';  
+const MS={B:[3,5,7],I:[6,12,16,24],M:[32,48,64]};  
+let modeIdx=0,missed=[],inRem=false,seqLen=3,seq=[],seqIdx=0;  
+const MXDUR=1100,MNDUR=130;  
+const FB={idle:{l:'ℵ₀',c:'s-null'},flashing:{l:'ℵ₀',c:'s-null'},building:{l:'ℵ',c:'s-build'},'result-ok':{l:'ℵ ∴',c:'s-ok'},'result-err':{l:'ℵ',c:'s-err'},cascade:{l:'ℵ₁',c:'s-ok'}};  
+function updateFlashBtn(){const s=FB[state]||FB.idle,b=document.getElementById('flash-btn');b.textContent=s.l;b.className=s.c;}  
+function genSeq(){seq=[];for(let i=0;i<seqLen;i++)seq.push(SIGS[Math.floor(Math.random()*64)]);seqIdx=0;}  
+function doFlash(){  
+  toggleOff(true);if(!seq.length||seqIdx>=seqLen)genSeq();activeTarget=seq[seqIdx];hideSP();  
+  document.getElementById('yao-display').classList.remove('glow');document.getElementById('mini-display').classList.remove('glow');  
+  const ft=document.getElementById('flash-target');ft.textContent=activeTarget.g;ft.classList.add('show');  
+  sndHex(activeTarget);state='flashing';render();  
+  const dur=Math.max(MNDUR,MXDUR-streak*55)+Math.floor(Math.random()*80);  
+  setTimeout(()=>{ft.classList.remove('show');isTraining=true;state='building';toggleOff(true);},dur);  
+}  
+function showErr(inp){  
+  document.getElementById('panel-err').classList.add('show');  
+  document.getElementById('eu-g').textContent=inp?inp.g:'';document.getElementById('et-g').textContent=activeTarget.g;  
+  const c=document.getElementById('ep-diffs');c.innerHTML='';  
+  const nodes=[{i:Proj.ext.d,o:activeTarget.ext.d},{i:Proj.ext.k,o:activeTarget.ext.k},{i:Proj.ext.p,o:activeTarget.ext.p},{i:Proj.cen.d,o:activeTarget.cen.d},{i:Proj.cen.k,o:activeTarget.cen.k},{i:Proj.cen.p,o:activeTarget.cen.p}];  
+  nodes.forEach(n=>{const bad=n.i!==n.o,r=document.createElement('div');r.className='ep-row '+(bad?'bad':'ok');r.innerHTML=`<div class="ep-ln">${n.i===Y?'<div class="ep-dy"></div>':'<div class="ep-dn"><div class="ep-dnb"></div><div class="ep-dnb"></div></div>'}</div><div class="ep-ln">${n.o===Y?'<div class="ep-dy"></div>':'<div class="ep-dn"><div class="ep-dnb"></div><div class="ep-dnb"></div></div>'}</div>`;c.appendChild(r);});  
+}  
+  
+function doSubmit(){  
+  if(!isTraining||voidCount()>0)return;  
+  const inp=getResolvedSig();isTraining=false;seqIdx++;  
+  const ft=document.getElementById('flash-target');ft.textContent=activeTarget.g;ft.classList.add('show');setTimeout(()=>ft.classList.remove('show'),300);  
+  sndHex(activeTarget);  
+  if(inp===activeTarget){  
+    streak++;totalN++;document.getElementById('sv').textContent=streak;document.getElementById('tv').textContent=totalN;  
+    sndOK();state='result-ok';applyProj(activeTarget);  
+    const yd=document.getElementById('yao-display'),md=document.getElementById('mini-display');  
+    yd.classList.remove('glow');md.classList.remove('glow');void yd.offsetWidth;void md.offsetWidth;  
+    renderYao();updateMini();yd.classList.add('glow');md.classList.add('glow');  
+    updateRight(activeTarget);document.getElementById('panel-right').classList.add('show');  
+  }else{  
+    const ink=document.getElementById('ink-cloud');ink.classList.add('show');void ink.offsetWidth;ink.classList.remove('show');  
+    missed.push(activeTarget);document.getElementById('tv').textContent=totalN;sndFail();state='result-err';showErr(inp);render();  
+  }  
+  updateFlashBtn();  
+}  
+function handleFlash(){  
+  if(state==='cascade'||state==='flashing')return;  
+  switch(state){case'idle':doFlash();break;case'building':doSubmit();break;case'result-ok':case'result-err':clearCont();break;}  
+}  
+function clearCont(){  
+  toggleOff(true);document.getElementById('flash-target').classList.remove('show');  
+  document.getElementById('yao-display').classList.remove('glow');document.getElementById('mini-display').classList.remove('glow');  
+  hideSP();state='idle';render();  
+  if(seqIdx>=seqLen){  
+    if(inRem){inRem=false;seq=[];}  
+    else if(missed.length>0){seq=[...missed];missed=[];seqIdx=0;seqLen=seq.length;inRem=true;streak=0;document.getElementById('sv').textContent=streak;setTimeout(doFlash,150);return;}  
+    else{modeIdx++;const mA=MS[mode];if(modeIdx>=mA.length){startCascade();return;}seqLen=mA[modeIdx];seqIdx=0;seq=[];}  
+  }  
+  setTimeout(doFlash,150);  
+}  
+  
+function startCascade(){  
+  state='cascade';updateFlashBtn();hideSP();  
+  document.getElementById('yao-display').classList.remove('glow');document.getElementById('mini-display').classList.remove('glow');  
+  cascadeQ=[...SIGS].sort(()=>Math.random()-.5);cascadeIdx=0;playCasc();  
+}  
+function playCasc(){  
+  const ft=document.getElementById('flash-target');  
+  if(cascadeIdx>=cascadeQ.length){sndApex();cascadeTimer=setTimeout(()=>{ft.classList.remove('show');advTier();},1600);return;}  
+  const sig=cascadeQ[cascadeIdx];ft.textContent=sig.g;ft.classList.add('show');sndHex(sig);cascadeIdx++;  
+  cascadeTimer=setTimeout(()=>{ft.classList.remove('show');setTimeout(playCasc,800);},900);  
+}  
+function advTier(){modeIdx++;if(modeIdx>=MS[mode].length){if(mode==='B')setMode('I');else if(mode==='I')setMode('M');else{state='idle';render();return;}return;}seqLen=MS[mode][modeIdx];state='idle';doReset(true);}  
+function doReset(silent){  
+  if(!silent)sndReset();if(cascadeTimer){clearTimeout(cascadeTimer);cascadeTimer=null;}  
+  isTraining=false;activeTarget=null;seq=[];seqIdx=0;state='idle';cascadeQ=[];cascadeIdx=0;  
+  document.getElementById('flash-target').classList.remove('show');document.getElementById('yao-display').classList.remove('glow');document.getElementById('mini-display').classList.remove('glow');  
+  hideSP();toggleOff(true);  
+}  
+function doRestart(){sndRestart();streak=0;totalN=0;missed=[];inRem=false;document.getElementById('sv').textContent=0;document.getElementById('tv').textContent=0;doReset(true);setMode(mode);}  
+function setMode(m){if(state==='building')return;mode=m;modeIdx=0;seqLen=MS[m][0];seq=[];seqIdx=0;missed=[];inRem=false;['B','I','M'].forEach(x=>document.getElementById('d'+x).className='db'+(x===m?' on':''));}  
+function toggleTheme(){  
+  const rt=document.documentElement;  
+  rt.dataset.theme=rt.dataset.theme==='light'?'dark':'light';  
+  const tb = document.getElementById('theme-btn');  
+  if (tb) tb.textContent = rt.dataset.theme === 'light' ? '☽' : 'ש';  
+}  
+  
+document.addEventListener('keydown',e=>{  
+  if(e.code==='Space'){e.preventDefault();handleFlash();}  
+  if(e.key==='r'||e.key==='R')doReset(false);  
+  if(e.key==='4')invertHex();if(e.key==='8')flipTopBottom();if(e.key==='f'||e.key==='F')totalFlip();  
+});  
+window.addEventListener('resize',sizeDisplay);  
+window.onload=()=>{buildGrid();setTimeout(()=>{sizeDisplay();render();},80);};  
+</script>  
+</body>  
+</html>
